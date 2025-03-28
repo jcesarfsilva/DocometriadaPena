@@ -64,3 +64,13 @@ elif task == "Prever Pena Aplicada (Regressão)":
         input_data = pd.DataFrame([[idade, genero, tipo_crime, regime_inicial, reincidencia]], columns=features)
         prediction = model_regressao.predict(input_data)[0]
         st.success(f"Pena Prevista: {prediction:.2f} anos")
+
+
+
+
+# pandas==2.2.3
+# numpy==1.26.4
+# scipy==1.15.2
+# scikit-learn==1.6.1
+# streamlit==1.38.0
+# Faker==37.1.0
