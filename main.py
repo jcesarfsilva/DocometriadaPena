@@ -1,38 +1,43 @@
 import streamlit as st
 import pandas as pd
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.compose import ColumnTransformer
-from sklearn.pipeline import Pipeline
-from sklearn.feature_extraction.text import CountVectorizer  # Alternativa ao TfidfVectorizer
+import numpy as np
+from collections import Counter
 
 # Carrega o dataset
 df = pd.read_csv('docometria_da_pena.csv')
 
-# Modelo de PLN (sem TfidfVectorizer)
-vectorizer = CountVectorizer(max_features=1000)  # Usamos CountVectorizer em vez de TfidfVectorizer
-X_pln = vectorizer.fit_transform(df['Observações'])  # Transforma as observações em uma matriz de contagem de palavras
-y_pln = df['Tipo_Crime']
-model_pln = MultinomialNB()
-model_pln.fit(X_pln, y_pln)
+# Modelo de PLN (Classificação de Tipo de Crime)
+def train_pln_model(df):
+    # Cria um dicionário de palavras-chave para cada tipo de crime
+    crime_keywords = {}
+    for crime in df['Tipo_Crime'].unique():
+        subset = df[df['Tipo_Crime'] == crime]
+        all_words = ' '.join(subset['Observações']).split()
+        common_words = [word for word, count in Counter(all_words).most_common(10)]
+        crime_keywords[crime] = set(common_words)
+    return crime_keywords
 
-# Modelo de Regressão
-features = ['Idade_Réu', 'Gênero_Réu', 'Tipo_Crime', 'Regime_Inicial', 'Reincidência']
-X_reg = df[features]
-y_reg = df['Pena_Aplicada_Years']
-categorical_features = ['Gênero_Réu', 'Tipo_Crime', 'Regime_Inicial', 'Reincidência']
-preprocessor = ColumnTransformer(
-    transformers=[
-        ('cat', OneHotEncoder(), categorical_features)
-    ],
-    remainder='passthrough'
-)
-model_regressao = Pipeline(steps=[
-    ('preprocessor', preprocessor),
-    ('regressor', RandomForestRegressor(random_state=42))
-])
-model_regressao.fit(X_reg, y_reg)
+def predict_crime_type(observacao, crime_keywords):
+    words = observacao.split()
+    scores = {crime: sum(word in keywords for word in words) for crime, keywords in crime_keywords.items()}
+    return max(scores, key=scores.get)
+
+crime_keywords = train_pln_model(df)
+
+# Modelo de Regressão (Previsão de Pena Aplicada)
+def train_regression_model(df):
+    # Calcula a média de pena por combinação de características
+    averages = df.groupby(['Gênero_Réu', 'Tipo_Crime', 'Regime_Inicial', 'Reincidência'])['Pena_Aplicada_Years'].mean()
+    return averages
+
+def predict_sentence_length(genero, tipo_crime, regime_inicial, reincidencia, averages):
+    key = (genero, tipo_crime, regime_inicial, reincidencia)
+    if key in averages:
+        return averages[key]
+    else:
+        return df['Pena_Aplicada_Years'].mean()  # Retorna a média geral se a combinação não for encontrada
+
+averages = train_regression_model(df)
 
 # Interface Streamlit
 st.title("Análise de Docometria da Pena")
@@ -48,8 +53,7 @@ if task == "Classificar Tipo de Crime (PLN)":
         if observacao.strip() == "":
             st.warning("Por favor, insira uma observação.")
         else:
-            input_vector = vectorizer.transform([observacao])  # Transforma a observação usando CountVectorizer
-            prediction = model_pln.predict(input_vector)[0]
+            prediction = predict_crime_type(observacao, crime_keywords)
             st.success(f"Tipo de Crime Previsto: {prediction}")
 
 elif task == "Prever Pena Aplicada (Regressão)":
@@ -61,6 +65,5 @@ elif task == "Prever Pena Aplicada (Regressão)":
     reincidencia = st.selectbox("Reincidência:", ["Sim", "Não"])
     
     if st.button("Prever"):
-        input_data = pd.DataFrame([[idade, genero, tipo_crime, regime_inicial, reincidencia]], columns=features)
-        prediction = model_regressao.predict(input_data)[0]
+        prediction = predict_sentence_length(genero, tipo_crime, regime_inicial, reincidencia, averages)
         st.success(f"Pena Prevista: {prediction:.2f} anos")
