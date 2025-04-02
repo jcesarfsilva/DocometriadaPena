@@ -1,7 +1,7 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
 import home, calcular, cadastro,dashboard
-import os
+
 
 st.set_page_config(
         page_title = "Dosimetria",
@@ -9,16 +9,6 @@ st.set_page_config(
         layout = "wide",
 
     )
-
-
-
-config_path = "config/install_path.txt"  # Caminho relativo dentro do projeto
-if os.path.exists(config_path):
-    with open(config_path, "r") as f:
-        install_path = f.read().strip()
-else:
-    install_path = "/default/path"  # Valor padrão caso o arquivo não exista
-
 class Multiapp:
     
     def __int__(self):
@@ -50,4 +40,5 @@ class Multiapp:
             cadastro.app()    
         if app == "Dashboard":
             dashboard.app()
-    run()
+if __name__ == "__main__":
+    Multiapp().run()

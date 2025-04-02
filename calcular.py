@@ -53,7 +53,7 @@ def app():
                     st.write(f"**Resumo:** {resultado[17]}")
         
 
-        pass
+        
 # §§§§§§§§§§§§§§§§ # # §§§§§§§§§§§§§§§§ # # §§§§§§§§§§§§§§§§ # # §§§§§§§§§§§§§§§§ #
     with tab2:
         # Inicializa variáveis de sessão
